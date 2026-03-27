@@ -15,6 +15,7 @@ func init() {
 	_ = RegisterMessageHandler(mountServiceID, uint32(MountProcNull), onMountNull)
 	_ = RegisterMessageHandler(mountServiceID, uint32(MountProcMount), onMount)
 	_ = RegisterMessageHandler(mountServiceID, uint32(MountProcUmnt), onUMount)
+	_ = RegisterMessageHandler(mountServiceID, uint32(MountProcExport), onExport)
 }
 
 func onMountNull(ctx context.Context, w *response, userHandle Handler) error {
@@ -55,4 +56,19 @@ func onUMount(ctx context.Context, w *response, userHandle Handler) error {
 	}
 
 	return w.writeHeader(ResponseCodeSuccess)
+}
+
+// onExport returns the list of exported filesystems (RFC 1813, appendix I,
+// MOUNTPROC3_EXPORT). We export a single root "/", with no host restrictions.
+func onExport(ctx context.Context, w *response, userHandle Handler) error {
+	if err := w.writeHeader(ResponseCodeSuccess); err != nil {
+		return err
+	}
+
+	writer := bytes.NewBuffer([]byte{})
+	_ = xdr.Write(writer, uint32(1))        // value_follows: one export entry
+	_ = xdr.Write(writer, []byte("/"))       // ex_dir
+	_ = xdr.Write(writer, uint32(0))         // ex_groups: none (no host restrictions)
+	_ = xdr.Write(writer, uint32(0))         // ex_next: end of list
+	return w.Write(writer.Bytes())
 }
