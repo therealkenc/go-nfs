@@ -23,17 +23,23 @@ var (
 )
 
 // ResponseCode is a combination of accept_stat and reject_stat.
+// accept_stat values (RFC 5531 §9): SUCCESS=0, PROG_UNAVAIL=1,
+// PROG_MISMATCH=2, PROC_UNAVAIL=3, GARBAGE_ARGS=4, SYSTEM_ERR=5.
+// reject_stat values use separate codes starting at 100.
 type ResponseCode uint32
 
-// ResponseCode Codes
+// ResponseCode Codes — accept_stat values per RFC 5531
 const (
-	ResponseCodeSuccess ResponseCode = iota
-	ResponseCodeProgUnavailable
-	ResponseCodeProcUnavailable
-	ResponseCodeGarbageArgs
-	ResponseCodeSystemErr
-	ResponseCodeRPCMismatch
-	ResponseCodeAuthError
+	ResponseCodeSuccess         ResponseCode = iota // 0
+	ResponseCodeProgUnavailable                     // 1
+	ResponseCodeProgMismatch                        // 2 (requires mismatch_info body)
+	ResponseCodeProcUnavailable                     // 3
+	ResponseCodeGarbageArgs                         // 4
+	ResponseCodeSystemErr                           // 5
+
+	// reject_stat codes (not accept_stat) — offset to avoid collision
+	ResponseCodeRPCMismatch ResponseCode = 100
+	ResponseCodeAuthError   ResponseCode = 101
 )
 
 type conn struct {

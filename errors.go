@@ -88,10 +88,18 @@ func (a *AuthError) Error() string {
 	return "Auth Status: Unknown"
 }
 
-// MarshalBinary sends the specific auth status
+// MarshalBinary serializes the auth_stat field of an RPC MSG_DENIED reply
+// (RFC 5531 §9, reject_stat AUTH_ERROR).
+//
+// XDR is big-endian (RFC 4506 §3.2). The original code here used
+// binary.LittleEndian, which would produce wrong bytes on the wire. The bug
+// survived unnoticed because go-nfs never actually constructs an AuthError —
+// no errorFmt callback returns one, and the server never rejects
+// authentication — so this MarshalBinary was dead code in practice.
+// Fixed to BigEndian for correctness in case a future caller actually needs it.
 func (a *AuthError) MarshalBinary() (data []byte, err error) {
 	var resp [4]byte
-	binary.LittleEndian.PutUint32(resp[:], uint32(a.AuthStat))
+	binary.BigEndian.PutUint32(resp[:], uint32(a.AuthStat))
 	return resp[:], nil
 }
 
@@ -110,11 +118,11 @@ func (r *RPCMismatchError) Error() string {
 	return fmt.Sprintf("RPC Mismatch: Expected version between %d and %d.", r.Low, r.High)
 }
 
-// MarshalBinary sends the specific rpc mismatch range
+// BigEndian see comment on AuthError.MarshalBinary
 func (r *RPCMismatchError) MarshalBinary() (data []byte, err error) {
 	var resp [8]byte
-	binary.LittleEndian.PutUint32(resp[0:4], uint32(r.Low))
-	binary.LittleEndian.PutUint32(resp[4:8], uint32(r.High))
+	binary.BigEndian.PutUint32(resp[0:4], uint32(r.Low))
+	binary.BigEndian.PutUint32(resp[4:8], uint32(r.High))
 	return resp[:], nil
 }
 
